@@ -27,7 +27,6 @@ function App() {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [downloadData, setDownloadData] = useState({ blob: null, fileName: '', isZip: false });
   const [activeStep, setActiveStep] = useState(1);
-  const [errors, setErrors] = useState({});
 
   const [formData, setFormData] = useState({
     Kota: '', Tanggal_Konfirmasi: '', Periode: '', Nama_Klien: '',
@@ -38,20 +37,6 @@ function App() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => { const n = { ...prev }; delete n[name]; return n; });
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    if (!templateFile) newErrors.templateFile = 'File template Word wajib diupload';
-    if (!formData.Kota.trim()) newErrors.Kota = 'Kota wajib diisi';
-    if (!formData.Tanggal_Konfirmasi) newErrors.Tanggal_Konfirmasi = 'Tanggal surat wajib diisi';
-    if (!formData.Nama_Klien.trim()) newErrors.Nama_Klien = 'Nama klien wajib diisi';
-    if (!formData.Nama_Direktur.trim()) newErrors.Nama_Direktur = 'Nama direktur wajib diisi';
-    const allNames = [...new Set([...excelNames, ...manualNames.split('\n').map(n => n.trim()).filter(n => n)])];
-    if (allNames.length === 0) newErrors.penerima = 'Minimal satu nama penerima wajib ditambahkan';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleExcelUpload = (e) => {
@@ -77,11 +62,19 @@ function App() {
   };
 
   const generateDocuments = async () => {
-    if (!validate()) return;
+    if (!templateFile) {
+      alert('Harap upload file Template Word terlebih dahulu!');
+      return;
+    }
     setIsProcessing(true);
     try {
       const manualArray = manualNames.split('\n').map((n) => n.trim()).filter((n) => n);
       const allNames = [...new Set([...excelNames, ...manualArray])];
+      if (allNames.length === 0) {
+        alert('Harap masukkan setidaknya satu Nama Penerima!');
+        setIsProcessing(false);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -105,18 +98,18 @@ function App() {
             if (allNames.length === 1) {
               setDownloadData({
                 blob: out,
-                fileName: `Konfirmasi Utang - ${penerima}.docx`,
+                fileName: `Konfirmasi Piutang - ${penerima}.docx`,
                 isZip: false
               });
             } else {
-              zipResult.file(`Konfirmasi Utang - ${penerima}.docx`, out);
+              zipResult.file(`Konfirmasi Piutang - ${penerima}.docx`, out);
             }
           });
           if (allNames.length > 1) {
             const zipContent = await zipResult.generateAsync({ type: 'blob' });
             setDownloadData({
               blob: zipContent,
-              fileName: `Konfirmasi Utang - ${formData.Nama_Klien || 'Klien'}.zip`,
+              fileName: `Konfirmasi Piutang - ${formData.Nama_Klien || 'Klien'}.zip`,
               isZip: true
             });
           }
@@ -149,10 +142,10 @@ function App() {
       <header className="app-header">
         <div className="app-header__logo">
           <span className="app-header__logo-icon"><Icons.Document /></span>
-          <h1 className="app-header__title">Generator Konfirmasi Utang</h1>
+          <h1 className="app-header__title">Generator Konfirmasi Piutang</h1>
         </div>
         <p className="app-header__subtitle">
-          Buat surat Konfirmasi Utang untuk audit dengan cepat dan mudah
+          Buat surat konfirmasi piutang untuk audit dengan cepat dan mudah
         </p>
       </header>
 
@@ -198,8 +191,7 @@ function App() {
                     onChange={(e) => {
                       setTemplateFile(e.target.files[0]);
                       setActiveStep(2);
-                      if (errors.templateFile) setErrors((prev) => { const n = { ...prev }; delete n.templateFile; return n; });
-                    }}
+                    }} 
                   />
                   <div className="file-upload__icon"><Icons.Upload /></div>
                   <p className="file-upload__text">
@@ -214,12 +206,11 @@ function App() {
                     <span>{templateFile.name}</span>
                   </div>
                 )}
-                {errors.templateFile && <p className="form-error-msg">⚠ {errors.templateFile}</p>}
               </div>
               
               <div className="mt-3">
                 <a 
-                  href="/bahan/Konfirmasi-Utang-Template.docx"
+                  href="/bahan/Konfirmasi-Piutang-Template.docx" 
                   download 
                   className="btn btn--outline btn--full"
                 >
@@ -241,26 +232,24 @@ function App() {
               <div className="form-grid mt-3">
                 <div className="form-group">
                   <label className="form-label">Kota <span className="form-label__required">*</span></label>
-                  <input
-                    name="Kota"
-                    className={`form-input${errors.Kota ? ' form-input--error' : ''}`}
-                    placeholder="Samarinda"
+                  <input 
+                    name="Kota" 
+                    className="form-input"
+                    placeholder="Samarinda" 
                     onChange={handleInputChange}
                     value={formData.Kota}
                   />
-                  {errors.Kota && <p className="form-error-msg">⚠ {errors.Kota}</p>}
                 </div>
                 
                 <div className="form-group">
                   <label className="form-label">Tanggal Surat <span className="form-label__required">*</span></label>
-                  <input
-                    name="Tanggal_Konfirmasi"
+                  <input 
+                    name="Tanggal_Konfirmasi" 
                     type="date"
-                    className={`form-input${errors.Tanggal_Konfirmasi ? ' form-input--error' : ''}`}
+                    className="form-input"
                     onChange={handleInputChange}
                     value={formData.Tanggal_Konfirmasi}
                   />
-                  {errors.Tanggal_Konfirmasi && <p className="form-error-msg">⚠ {errors.Tanggal_Konfirmasi}</p>}
                 </div>
                 
                 <div className="form-group">
@@ -276,14 +265,13 @@ function App() {
                 
                 <div className="form-group">
                   <label className="form-label">Nama Klien <span className="form-label__required">*</span></label>
-                  <input
-                    name="Nama_Klien"
-                    className={`form-input${errors.Nama_Klien ? ' form-input--error' : ''}`}
-                    placeholder="PT Contoh Abadi"
+                  <input 
+                    name="Nama_Klien" 
+                    className="form-input"
+                    placeholder="PT Contoh Abadi" 
                     onChange={handleInputChange}
                     value={formData.Nama_Klien}
                   />
-                  {errors.Nama_Klien && <p className="form-error-msg">⚠ {errors.Nama_Klien}</p>}
                 </div>
                 
                 <div className="form-row">
@@ -346,14 +334,13 @@ function App() {
                 <div className="form-row">
                   <div className="form-row__item">
                     <label className="form-label">Nama Direktur <span className="form-label__required">*</span></label>
-                    <input
-                      name="Nama_Direktur"
-                      className={`form-input${errors.Nama_Direktur ? ' form-input--error' : ''}`}
-                      placeholder="Nama penanda tangan"
+                    <input 
+                      name="Nama_Direktur" 
+                      className="form-input"
+                      placeholder="Nama penanda tangan" 
                       onChange={handleInputChange}
                       value={formData.Nama_Direktur}
                     />
-                    {errors.Nama_Direktur && <p className="form-error-msg">⚠ {errors.Nama_Direktur}</p>}
                   </div>
                   <div className="form-row__item" style={{maxWidth: '180px'}}>
                     <label className="form-label">Jabatan</label>
@@ -408,33 +395,19 @@ function App() {
               <div>
                 <label className="form-label mb-2">Input Manual</label>
                 <textarea
-                  className={`form-textarea${errors.penerima && excelNames.length === 0 ? ' form-textarea--error' : ''}`}
+                  className="form-textarea"
                   placeholder="PT Maju Bersama&#10;CV Sejahtera Abadi&#10;Toko Berkah Jaya"
                   value={manualNames}
                   onChange={(e) => {
                     setManualNames(e.target.value);
                     setActiveStep(3);
-                    if (errors.penerima) setErrors((prev) => { const n = { ...prev }; delete n.penerima; return n; });
                   }}
                 />
-                {errors.penerima
-                  ? <p className="form-error-msg">⚠ {errors.penerima}</p>
-                  : <p className="form-hint">Total: <strong>{totalRecipients}</strong> penerima</p>
-                }
+                <p className="form-hint">
+                  Total: <strong>{totalRecipients}</strong> penerima
+                </p>
               </div>
             </section>
-
-            {/* Validation Summary */}
-            {Object.keys(errors).length > 0 && (
-              <div className="validation-alert">
-                <p className="validation-alert__title">⚠ Harap lengkapi data berikut sebelum generate:</p>
-                <ul className="validation-alert__list">
-                  {Object.values(errors).map((msg, i) => (
-                    <li key={i} className="validation-alert__item">• {msg}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             {/* Action Bar */}
             <div className="action-bar">
@@ -450,7 +423,6 @@ function App() {
                       Sebutan1: '', Auditor1: '', Sebutan2: '', Auditor2: '',
                       Tanggal_Jatuh_Tempo: '', Nama_Direktur: '', Jabatan: ''
                     });
-                    setErrors({});
                     setActiveStep(1);
                   }
                 }}
@@ -539,7 +511,7 @@ function App() {
 
       {/* Footer */}
       <footer className="text-center text-muted" style={{ fontSize: '0.8125rem' }}>
-        <p>Generator Konfirmasi Utang</p>
+        <p>Generator Konfirmasi Piutang</p>
       </footer>
     </div>
   );
